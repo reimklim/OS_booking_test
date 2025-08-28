@@ -3,20 +3,23 @@ import requests
 from pydantic import BaseModel, Field, ValidationError
 from datetime import date
 
+new_booking_id = []
 
-class Booking(BaseModel):
+class BookingGetResponse(BaseModel):
     bookingid: int = Field(ge=1)
 
-class Dates(BaseModel):
+class BookingDates(BaseModel):
     checkin: date
     checkout: date
 
-class Booking_id(BaseModel):
+class BookingGetForId(BaseModel):
     firstname: str
     lastname: str
     totalprice: float
     depositpaid: bool
-    bookingdates: Dates
+    bookingdates: BookingDates
+
+
 
 @pytest.mark.usefixtures("base_url")
 @pytest.mark.api_get
@@ -41,15 +44,51 @@ def test_get_booking(base_url):
    # Проверка корректности формата тела ответа
     try:
         for booking in data:
-            Booking(**booking)
+            BookingGetResponse(**booking)
     except ValidationError:
         pytest.xfail("Неверный формат тела ответа")
 
 
 
+@pytest.mark.usefixtures("base_url")
+@pytest.mark.api_post
+@pytest.mark.parametrize("firstname, lastname, totalprice, depositpaid, checkin, checkout, additionalneeds", [
+    ("Sally", "Brown", 111, True, "2013-02-23", "2014-10-23", "Breakfast"),
+    ("Josh", "Allen", 150.5, False, "2018-01-01", "2019-01-01", "super bowls"),
+    ("John", "Smith", 0, True, "2020-06-15", "2020-06-20", None),
+    ("Anna", "Ivanova", 42, False, "2024-12-01", "2024-12-05", "Late checkout"),
+    ("Мария", "Петрова", 75.25, True, "2025-01-10", "2025-01-15", "Завтрак"),
+    ("Edge", "Case", 9999999, True, "1970-01-01", "2100-12-31", ""),
+    ("Short", "Stay", 10, False, "2025-08-01", "2025-08-01", "None"),
+])
+def test_create_booking(base_url, firstname, lastname, totalprice, depositpaid, checkin, checkout, additionalneeds):
+    '''Тест добавления новой брони'''
+
+    response = requests.post(f"{base_url}/booking", json={
+        "firstname": firstname,
+        "lastname": lastname,
+        "totalprice": totalprice,
+        "depositpaid": depositpaid,
+        "bookingdates": {
+            "checkin": checkin,
+            "checkout": checkout
+        },
+        "additionalneeds": additionalneeds
+    })
+
+    data = dict(response.json())
+    new_booking_id.append(data.get("bookingid"))
+
+    try:
+        assert response.status_code == 200
+        print(new_booking_id)
+    except AssertionError:
+        pytest.xfail("Баг: Север не возвращает успех при создании брони с корректными данными")
+
+
 
 @pytest.mark.usefixtures("base_url")
-@pytest.mark.parametrize("bookingid", [306, 184])
+@pytest.mark.parametrize("bookingid", new_booking_id)
 @pytest.mark.api_get
 def test_get_booking_id(base_url, bookingid):
     '''Тест информации о брони по id'''
@@ -64,8 +103,6 @@ def test_get_booking_id(base_url, bookingid):
     data = response.json()
 
     try:
-        Booking_id(**data)
+        BookingGetForId(**data)
     except ValidationError:
         pytest.xfail("Баг: Неверный формат тела ответа")
-
-
