@@ -4,3 +4,4 @@ requirements.txt
 pytest.ini
 API/__pycache__/
 UI/__pycache__/
+__pycache__
