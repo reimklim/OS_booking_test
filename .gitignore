@@ -1,3 +1,7 @@
 .venv/
 requirements.in
 requirements.txt
+pytest.ini
+API/__pycache__/
+UI/__pycache__/
+conftest.py
