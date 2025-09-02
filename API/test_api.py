@@ -88,21 +88,15 @@ def test_create_booking(base_url, firstname, lastname, totalprice, depositpaid, 
 
 
 @pytest.mark.usefixtures("base_url")
-@pytest.mark.parametrize("bookingid", new_booking_id)
 @pytest.mark.api_get
-def test_get_booking_id(base_url, bookingid):
-    '''Тест информации о брони по id'''
-
-    response = requests.get(f"{base_url}/booking/{bookingid}")
+def test_get_booking_id(base_url, created_booking_ids):
+    '''Тест получения броней по ID'''
     
-    try:
-        assert response.status_code == 200
-    except AssertionError:
-        pytest.xfail("Баг: Сервер возвращает 400 вместо 200 на запрос брони по существующему id")
-
-    data = response.json()
-
-    try:
-        BookingGetForId(**data)
-    except ValidationError:
-        pytest.xfail("Баг: Неверный формат тела ответа")
+    for booking_id in created_booking_ids:
+        response = requests.get(f"{base_url}/booking/{booking_id}")
+        assert response.status_code == 200, f"Бронь {booking_id} недоступна"
+        
+        try:
+            BookingGetForId(**response.json())
+        except ValidationError as e:
+            pytest.fail(f"Неверный формат для брони {booking_id}: {e}")
